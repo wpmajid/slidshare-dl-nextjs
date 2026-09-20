@@ -5,6 +5,35 @@ No VPS — everything runs as Vercel serverless functions.
 
 ## Two ways to use this
 
+## Security settings (`lib/settings.js`)
+
+Both `/api/get-slides` and `/api/generate-file` require a shared secret and
+cap how many slides one request can include. Edit `lib/settings.js` any time
+and redeploy — no other code changes needed:
+
+```js
+export const API_KEY = process.env.SSDL_API_KEY || '...';
+export const MAX_SELECTED_SLIDES = 300;
+```
+
+- **`API_KEY`** — every request must send it back as the `X-API-Key` header,
+  or it gets a 401. This is what stops anyone else from calling this backend
+  directly (curl/Postman/their own site) and running up your server's
+  CPU/bandwidth for free. If you change it, you must update the exact same
+  value in the WordPress plugin (`inc/admin.php` → `SSDWP_API_KEY`), or the
+  plugin starts getting 401s. You can also set it via an `SSDL_API_KEY`
+  environment variable instead of editing the file, if you prefer.
+- **`MAX_SELECTED_SLIDES`** — rejects a `/api/generate-file` request that asks
+  for more slides than this in one go, so one request can't tie up the server
+  with an unreasonably large deck.
+
+Note: this API key only protects **server-to-server** calls (path A below,
+the WordPress plugin). A secret sent from browser JavaScript (path B, the
+embeddable widget / the `/` demo page) is visible to anyone viewing the page
+source, so it can't be kept secret there — that path relies on the CORS
+origin allowlist instead (see path B below). If path A is your only use case,
+you're fully covered.
+
 ### A) Drop-in replacement for your existing WordPress plugin
 
 If you already have the `slidesh-downloader-wp` plugin (the one that calls
@@ -86,6 +115,13 @@ origins via an `ALLOWED_ORIGINS` env var (comma-separated) in the Vercel
 project settings.
 
 The `/` page on this deployment is a standalone demo of this same path.
+
+**Currently returns 401**: since `/api/get-slides` now requires the
+`X-API-Key` header (see "Security settings" above) and a browser page can't
+hold that secret safely, this path is disabled until you decide how you want
+to expose it. If you want to actually use it, ask for a separate,
+unauthenticated-but-rate-limited route instead of reusing the WordPress
+plugin's key here.
 
 ## Local development
 

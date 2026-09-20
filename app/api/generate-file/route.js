@@ -1,4 +1,6 @@
 import { corsHeaders } from '../../../lib/cors';
+import { isAuthorized } from '../../../lib/auth';
+import { MAX_SELECTED_SLIDES } from '../../../lib/settings';
 import { mapWithConcurrency, fetchImageBuffer, buildZip, buildPdf, buildPptx, toPngBuffer } from '../../../lib/generate-file';
 import { saveGeneratedFile } from '../../../lib/storage';
 
@@ -23,6 +25,10 @@ export async function POST(req) {
   const headers = corsHeaders(req);
   const json = (data, status = 200) => Response.json(data, { status, headers });
 
+  if (!isAuthorized(req)) {
+    return json({ error: 'Unauthorized.' }, 401);
+  }
+
   try {
     const body = await req.json();
     const { slideshowInfo, resolution, outputFormat, selectedIndices } = body || {};
@@ -32,6 +38,9 @@ export async function POST(req) {
     }
     if (!Array.isArray(selectedIndices) || selectedIndices.length === 0) {
       return json({ error: 'No slides selected.' }, 400);
+    }
+    if (selectedIndices.length > MAX_SELECTED_SLIDES) {
+      return json({ error: `Too many slides selected (max ${MAX_SELECTED_SLIDES}).` }, 400);
     }
 
     const { host, imageLocation, imageTitle } = slideshowInfo;

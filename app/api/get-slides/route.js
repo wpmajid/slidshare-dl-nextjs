@@ -1,4 +1,5 @@
 import { corsHeaders } from '../../../lib/cors';
+import { isAuthorized } from '../../../lib/auth';
 
 export const runtime = 'edge';
 
@@ -11,6 +12,10 @@ export async function OPTIONS(req) {
 export async function POST(req) {
   const headers = corsHeaders(req);
   const json = (data, status = 200) => Response.json(data, { status, headers });
+
+  if (!isAuthorized(req)) {
+    return json({ error: 'Unauthorized.' }, 401);
+  }
 
   try {
     const { slideshareUrl } = await req.json();
