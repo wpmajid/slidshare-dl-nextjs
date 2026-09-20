@@ -1,5 +1,5 @@
 import { corsHeaders } from '../../../lib/cors';
-import { mapWithConcurrency, buildZip, buildPdf, buildPptx, toPngBuffer } from '../../../lib/generate-file';
+import { mapWithConcurrency, fetchImageBuffer, buildZip, buildPdf, buildPptx, toPngBuffer } from '../../../lib/generate-file';
 import { saveGeneratedFile } from '../../../lib/storage';
 
 // Node runtime (not Edge) - pdfkit/pptxgenjs need it, and it lets us run this
@@ -60,15 +60,9 @@ export async function POST(req) {
       return `${host}/${imageLocation}/${quality}/${imageTitle}-${realSlideNum}-${width}.jpg`;
     });
 
-    const buffers = await mapWithConcurrency(imageUrls, 10, async (imgUrl) => {
-      const res = await fetch(imgUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SlideDownloader/1.0)' },
-      });
-      if (!res.ok) {
-        throw new Error(`Failed to download slide image (HTTP ${res.status})`);
-      }
-      return Buffer.from(await res.arrayBuffer());
-    });
+    const buffers = await mapWithConcurrency(imageUrls, 10, (imgUrl) =>
+      fetchImageBuffer(imgUrl, { userAgent: 'Mozilla/5.0 (compatible; SlideDownloader/1.0)' })
+    );
 
     const format = String(outputFormat).toLowerCase();
     let fileBuffer;
