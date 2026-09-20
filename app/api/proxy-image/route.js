@@ -32,7 +32,10 @@ export async function GET(req) {
   }
 
   const imgRes = await fetch(target.toString(), {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SlideDownloader/1.0)' },
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; SlideDownloader/1.0)',
+      Referer: 'https://www.slideshare.net/',
+    },
   });
   if (!imgRes.ok || !imgRes.body) {
     return json({ error: `Failed to fetch image: HTTP ${imgRes.status}` }, 502);

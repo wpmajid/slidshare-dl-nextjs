@@ -61,7 +61,10 @@ export async function POST(req) {
     });
 
     const buffers = await mapWithConcurrency(imageUrls, 10, (imgUrl) =>
-      fetchImageBuffer(imgUrl, { userAgent: 'Mozilla/5.0 (compatible; SlideDownloader/1.0)' })
+      fetchImageBuffer(imgUrl, {
+        userAgent: 'Mozilla/5.0 (compatible; SlideDownloader/1.0)',
+        referer: 'https://www.slideshare.net/',
+      })
     );
 
     const format = String(outputFormat).toLowerCase();
