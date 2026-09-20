@@ -37,17 +37,27 @@ AJAX flow stay exactly as they are.
   out.
 - `POST /api/generate-file` — same shape too: `{ slideshowInfo, resolution,
   outputFormat, selectedIndices }` in, `{ downloadUrl }` out. It downloads the
-  selected slide images, builds the ZIP/PDF/PPTX **in the function itself**
-  (Node runtime, not Edge — pdfkit/pptxgenjs need Node), uploads the result to
-  **Vercel Blob** storage, and returns its public URL. The browser then just
-  navigates to that URL to download, exactly like before.
+  selected slide images and builds the ZIP/PDF/PPTX **in the function itself**
+  (Node runtime, not Edge — pdfkit/pptxgenjs need Node), then hands the file to
+  `lib/storage.js`, which picks storage automatically depending on where this
+  is deployed (see below).
 
-**Requires Vercel Blob** (needed for `generate-file` to have somewhere to put
-the finished file): in your Vercel project → Storage tab → Create Database →
-Blob → connect it to this project. Vercel then injects a
-`BLOB_READ_WRITE_TOKEN` environment variable automatically — no code changes
-needed. Blob has a free tier (1 GB storage / 10 GB bandwidth per month at the
-time of writing), more than enough for this.
+**Where the generated file is stored** (`lib/storage.js`):
+
+- **Deployed on Vercel** — its serverless functions have a read-only
+  filesystem, so the file goes to **Vercel Blob** instead. Set this up once:
+  Vercel project → Storage tab → Create Database → Blob → connect it to this
+  project. Vercel injects a `BLOB_READ_WRITE_TOKEN` env var automatically — no
+  code change needed. Free tier: 1 GB storage / 10 GB bandwidth per month at
+  the time of writing.
+- **Deployed anywhere with a persistent Node process** (Hostinger's Node.js
+  hosting, a VPS, plain `next start`) — there's no `BLOB_READ_WRITE_TOKEN`, so
+  it just writes the file to local disk and serves it back from
+  `GET /api/downloads/:filename` (auto-deleted a few minutes later), exactly
+  like the original Express backend's `/downloads/:filename` route. **Nothing
+  to configure** for this case — if you saw a
+  `Vercel Blob: No token found` error before this file existed, that's fixed
+  by this fallback; just redeploy.
 
 ### B) Embed directly on a page (no PHP backend at all)
 

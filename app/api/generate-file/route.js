@@ -1,6 +1,6 @@
-import { put } from '@vercel/blob';
 import { corsHeaders } from '../../../lib/cors';
 import { mapWithConcurrency, buildZip, buildPdf, buildPptx, toPngBuffer } from '../../../lib/generate-file';
+import { saveGeneratedFile } from '../../../lib/storage';
 
 // Node runtime (not Edge) - pdfkit/pptxgenjs need it, and it lets us run this
 // serverless function for up to 60s on Vercel's free Hobby plan for large decks.
@@ -97,13 +97,9 @@ export async function POST(req) {
     }
 
     const filename = `slides_${Date.now()}.${finalExt}`;
-    const blob = await put(filename, fileBuffer, {
-      access: 'public',
-      contentType,
-      addRandomSuffix: true,
-    });
+    const downloadUrl = await saveGeneratedFile(fileBuffer, filename, contentType, req.url);
 
-    return json({ downloadUrl: blob.url });
+    return json({ downloadUrl });
   } catch (err) {
     return json({ error: err.message }, 500);
   }
