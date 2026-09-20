@@ -1,35 +1,44 @@
+import { corsHeaders } from '../../../lib/cors';
+
 export const runtime = 'edge';
 
 const NEXT_DATA_RE = /<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/;
 
+export async function OPTIONS(req) {
+  return new Response(null, { status: 204, headers: corsHeaders(req) });
+}
+
 export async function POST(req) {
+  const headers = corsHeaders(req);
+  const json = (data, status = 200) => Response.json(data, { status, headers });
+
   try {
     const { slideshareUrl } = await req.json();
     if (!slideshareUrl) {
-      return Response.json({ error: 'No SlideShare URL provided.' }, { status: 400 });
+      return json({ error: 'No SlideShare URL provided.' }, 400);
     }
 
     let parsed;
     try {
       parsed = new URL(slideshareUrl);
     } catch {
-      return Response.json({ error: 'Invalid URL.' }, { status: 400 });
+      return json({ error: 'Invalid URL.' }, 400);
     }
     if (!/(^|\.)slideshare\.net$/i.test(parsed.hostname)) {
-      return Response.json({ error: 'Only slideshare.net URLs are supported.' }, { status: 400 });
+      return json({ error: 'Only slideshare.net URLs are supported.' }, 400);
     }
 
     const pageRes = await fetch(parsed.toString(), {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SlideDownloader/1.0)' },
     });
     if (!pageRes.ok) {
-      return Response.json({ error: `Failed to fetch page: HTTP ${pageRes.status}` }, { status: 502 });
+      return json({ error: `Failed to fetch page: HTTP ${pageRes.status}` }, 502);
     }
     const html = await pageRes.text();
 
     const match = html.match(NEXT_DATA_RE);
     if (!match) {
-      return Response.json({ error: 'Could not find slide data on that page.' }, { status: 404 });
+      return json({ error: 'Could not find slide data on that page.' }, 404);
     }
 
     const jsonData = JSON.parse(match[1]);
@@ -43,7 +52,7 @@ export async function POST(req) {
     const host = slides.host || '';
 
     if (!totalSlides || !host || !imageLocation || !imageTitle) {
-      return Response.json({ error: 'Could not read slide info from that page.' }, { status: 404 });
+      return json({ error: 'Could not read slide info from that page.' }, 404);
     }
 
     const previewQuality = 85;
@@ -53,12 +62,12 @@ export async function POST(req) {
       slideImagesPreview.push(`${host}/${imageLocation}/${previewQuality}/${imageTitle}-${i}-${previewWidth}.jpg`);
     }
 
-    return Response.json({
+    return json({
       totalSlides,
       slideImagesPreview,
       slideshowInfo: { host, imageLocation, imageTitle },
     });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    return json({ error: err.message }, 500);
   }
 }
