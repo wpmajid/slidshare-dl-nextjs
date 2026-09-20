@@ -97,7 +97,7 @@ export async function POST(req) {
     }
 
     const filename = `slides_${Date.now()}.${finalExt}`;
-    const downloadUrl = await saveGeneratedFile(fileBuffer, filename, contentType, req.url);
+    const downloadUrl = await saveGeneratedFile(fileBuffer, filename, contentType, req);
 
     return json({ downloadUrl });
   } catch (err) {
