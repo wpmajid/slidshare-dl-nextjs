@@ -6,7 +6,9 @@ const nextConfig = {
   // and the font files go missing (ENOENT). Keeping it external makes Node
   // require() it normally from node_modules, where __dirname is correct.
   experimental: {
-    serverComponentsExternalPackages: ['pdfkit'],
+    // sharp ships native (non-JS) binaries per-platform; bundling it breaks
+    // that lookup the same way pdfkit's font files break, so it's external too.
+    serverComponentsExternalPackages: ['pdfkit', 'sharp'],
   },
 };
 
